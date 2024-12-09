@@ -1,9 +1,8 @@
 {{ config(
     materialized='incremental',
     incremental_strategy='merge',
-    unique_key=['zpid'],
+    unique_key='zpid',
     merge_update_columns=[
-        'zpid',
         'address',
         'detailurl',
         'lotid',
@@ -17,13 +16,15 @@
         'livingarea',
         'longitude',
         'latitude',
-        'UNIT',
-        'UNITS',
+        'unit',
+        'units',
+        'apartment_added_dt',
         'updated_at'
-    ]
+    ],
+    post_hook="TRUNCATE TABLE raw.raw_new_zillow_apartments"
 ) }}
 
-WITH zillow_apartments AS (
+WITH daily_data AS (
     SELECT
         zpid,
         address,
@@ -39,13 +40,30 @@ WITH zillow_apartments AS (
         livingarea,
         longitude,
         latitude,
-        UNIT,  
-        UNITS,
-        current_timestamp() AS apartment_added_dt,
-        current_timestamp() AS updated_at
-    FROM {{ source('raw', 'raw_zillow_apartments') }}
+        unit,
+        units,
+        apartment_added_dt,
+        CURRENT_TIMESTAMP() AS updated_at -- Use current timestamp for updates
+    FROM {{ source('raw', 'raw_new_zillow_apartments') }}
 )
 
 SELECT
-    *
-FROM zillow_apartments
+    zpid,
+    address,
+    detailurl,
+    lotid,
+    imgsrc,
+    price,
+    zip,
+    buildingname,
+    propertytype,
+    bathrooms,
+    bedrooms,
+    livingarea,
+    longitude,
+    latitude,
+    unit,
+    units,
+    apartment_added_dt,
+    updated_at
+FROM daily_data
